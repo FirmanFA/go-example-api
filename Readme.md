@@ -2,6 +2,9 @@
 
 A sample backend RESTful API project written in GoLang using Gin framework and MySQL.
 
+## Before Running
+Set environment variables `DBUSER` and `DBPASS` with MySQL username and password.
+
 ## Dependencies
 
 - `github.com/gin-gonic/gin`: Web framework for building APIs in GoLang.
