@@ -1,4 +1,4 @@
-# Project Name
+# Go Backend Sample Project
 
 A sample backend RESTful API project written in GoLang using Gin framework and MySQL.
 
