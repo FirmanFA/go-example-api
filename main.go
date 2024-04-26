@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"example/go-example-api/docs"
 	"fmt"
 	"log"
 	"net/http"
@@ -9,7 +10,17 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-sql-driver/mysql"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
+
+type HTTPError struct {
+	Message string `json:"message" example:"status bad request"`
+}
+
+type HTTPSuccess struct {
+	Message string `json:"message" example:"success"`
+}
 
 type budgetModel struct {
 	BudgetValue int64  `json:"budget_value"`
@@ -26,7 +37,20 @@ type projectModel struct {
 
 var db *sql.DB
 
+// @contact.name   API Support
+// @contact.url    http://www.swagger.io/support
+// @contact.email  support@swagger.io
+
+// @license.name  Apache 2.0
+// @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
 func main() {
+
+	// programmatically set swagger info
+	docs.SwaggerInfo.Title = "Swagger Example API"
+	docs.SwaggerInfo.Description = "This is a sample server Petstore server."
+	docs.SwaggerInfo.Version = "1.0"
+	docs.SwaggerInfo.Host = "localhost:8080"
+	docs.SwaggerInfo.Schemes = []string{"http", "https"}
 
 	// Capture connection properties.
 	cfg := mysql.Config{
@@ -55,9 +79,22 @@ func main() {
 	router.PUT("/project/:id", updateProject)
 	router.DELETE("/project/:id", deleteProject)
 
+	// use ginSwagger middleware to serve the API docs
+	router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 	router.Run("localhost:8080")
 }
 
+// getProjects godoc
+// @Summary      Get projects
+// @Description  Get projects
+// @Tags         Get Projects
+// @Accept       json
+// @Produce      json
+// @Success      200  {array}  projectModel
+// @Failure      404  {object} 	HTTPError
+// @Failure      500  {object}  HTTPError
+// @Router       /projects [get]
 func getProjects(c *gin.Context) {
 
 	var projects []projectModel
@@ -66,6 +103,7 @@ func getProjects(c *gin.Context) {
 	if err != nil {
 		return
 	}
+
 	defer rows.Close()
 
 	for rows.Next() {
@@ -81,6 +119,17 @@ func getProjects(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, projects)
 }
 
+// getProjectById godoc
+// @Summary      Get project by id
+// @Description  Get project by id
+// @Tags         Get Project by id
+// @Accept       json
+// @Produce      json
+// @Param        id   path      int  true  "Project ID"
+// @Success      200  {object}  projectModel
+// @Failure      404  {object} 	HTTPError
+// @Failure      500  {object}  HTTPError
+// @Router       /projects/{id} [get]
 func getProjectById(c *gin.Context) {
 	id := c.Param("id")
 
@@ -101,6 +150,16 @@ func getProjectById(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, proj)
 }
 
+// postProjects godoc
+// @Summary      Post project
+// @Description  Post project
+// @Tags         Post project
+// @Accept       json
+// @Produce      json
+//	@Param		 project	body		projectModel	true	"Add project"
+// @Success      200  {object}  projectModel
+// @Failure      500  {object}  HTTPError
+// @Router       /projects [post]
 func postProjects(c *gin.Context) {
 	var newProject projectModel
 
@@ -162,6 +221,19 @@ func postProjects(c *gin.Context) {
 
 }
 
+
+// updateProjectById godoc
+// @Summary      Update project by id
+// @Description  Upadte project by id
+// @Tags         Update Project by id
+// @Accept       json
+// @Produce      json
+// @Param        id   path      int  true  "Project ID"
+// @Param		 project	body		projectModel	true	"Add project"
+// @Success      200  {object}  projectModel
+// @Failure      404  {object} 	HTTPError
+// @Failure      500  {object}  HTTPError
+// @Router       /project/{id} [put]
 func updateProject(c *gin.Context) {
 
 	id := c.Param("id")
@@ -233,7 +305,19 @@ func updateProject(c *gin.Context) {
 
 }
 
-func deleteProject(c *gin.Context){
+
+// deleteProjectById godoc
+// @Summary      Delete project by id
+// @Description  Delete project by id
+// @Tags         Delete Project by id
+// @Accept       json
+// @Produce      json
+// @Param        id   path      int  true  "Project ID"
+// @Success      200  {object}  HTTPSuccess
+// @Failure      404  {object} 	HTTPError
+// @Failure      500  {object}  HTTPError
+// @Router       /project/{id} [delete]
+func deleteProject(c *gin.Context) {
 
 	id := c.Param("id")
 

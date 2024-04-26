@@ -1,0 +1,185 @@
+definitions:
+  main.HTTPError:
+    properties:
+      message:
+        example: status bad request
+        type: string
+    type: object
+  main.HTTPSuccess:
+    properties:
+      message:
+        example: success
+        type: string
+    type: object
+  main.budgetModel:
+    properties:
+      budget_value:
+        type: integer
+      deadline:
+        type: string
+      down_payment:
+        type: integer
+    type: object
+  main.projectModel:
+    properties:
+      budget:
+        $ref: '#/definitions/main.budgetModel'
+      id:
+        type: string
+      leader:
+        type: string
+      title:
+        type: string
+    type: object
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+paths:
+  /project/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete project by id
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.HTTPSuccess'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.HTTPError'
+      summary: Delete project by id
+      tags:
+      - Delete Project by id
+    put:
+      consumes:
+      - application/json
+      description: Upadte project by id
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Add project
+        in: body
+        name: project
+        required: true
+        schema:
+          $ref: '#/definitions/main.projectModel'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.projectModel'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.HTTPError'
+      summary: Update project by id
+      tags:
+      - Update Project by id
+  /projects:
+    get:
+      consumes:
+      - application/json
+      description: Get projects
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.projectModel'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.HTTPError'
+      summary: Get projects
+      tags:
+      - Get Projects
+    post:
+      consumes:
+      - application/json
+      description: Post project
+      parameters:
+      - description: Add project
+        in: body
+        name: project
+        required: true
+        schema:
+          $ref: '#/definitions/main.projectModel'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.projectModel'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.HTTPError'
+      summary: Post project
+      tags:
+      - Post project
+  /projects/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get project by id
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.projectModel'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.HTTPError'
+      summary: Get project by id
+      tags:
+      - Get Project by id
+swagger: "2.0"
