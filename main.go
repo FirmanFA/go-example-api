@@ -2,8 +2,8 @@ package main
 
 import (
 	"database/sql"
-	"example/go-example-api/docs"
 	"fmt"
+	"go-example-api/docs"
 	"log"
 	"net/http"
 	"os"
@@ -52,16 +52,23 @@ func main() {
 	docs.SwaggerInfo.Host = "localhost:8080"
 	docs.SwaggerInfo.Schemes = []string{"http", "https"}
 
+	fmt.Println(os.Getenv("DBUSER"))
+	fmt.Println(os.Getenv("DBPASS"))
+
 	// Capture connection properties.
 	cfg := mysql.Config{
 		User:   os.Getenv("DBUSER"),
 		Passwd: os.Getenv("DBPASS"),
 		Net:    "tcp",
-		Addr:   "127.0.0.1:3306",
-		DBName: "recordings",
+		Addr:   "localhost:3306",
+		DBName: "company",
 	}
+
 	// Get a database handle.
 	var err error
+
+	fmt.Println(cfg.FormatDSN())
+
 	db, err = sql.Open("mysql", cfg.FormatDSN())
 	if err != nil {
 		log.Fatal(err)
