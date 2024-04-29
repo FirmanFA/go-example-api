@@ -60,7 +60,7 @@ func main() {
 		User:   os.Getenv("DBUSER"),
 		Passwd: os.Getenv("DBPASS"),
 		Net:    "tcp",
-		Addr:   "localhost:3306",
+		Addr:   "godockerDB",
 		DBName: "company",
 	}
 

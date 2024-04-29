@@ -1,0 +1,28 @@
+services:
+  web:
+    build: .
+    ports:
+      - "8080:8080"
+    expose:
+      - "8080"
+    image : go-example-api
+    environment:
+      - DBUSER=firman
+      - DBPASS=admin
+  db:
+    image: mysql:8.0
+    restart: always
+    container_name: godockerDB
+    environment:
+      MYSQL_DATABASE: 'company'
+      MYSQL_USER: 'firman'
+      MYSQL_PASSWORD: 'admin'
+      MYSQL_ROOT_PASSWORD: 'admin'
+    ports:
+      - '3306:3306'
+    expose:
+      - '3306'
+    volumes:
+      - my-db:/var/lib/mysql
+volumes:
+  my-db:
