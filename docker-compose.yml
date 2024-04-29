@@ -12,6 +12,32 @@ services:
     environment:
       - DBUSER=firman
       - DBPASS=admin
+  loki:
+    image: grafana/loki:2.9.0
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./config/loki.yaml:/etc/loki/local-config.yaml
+  promtail:
+    image: grafana/promtail:2.9.0
+    volumes:
+      # - /var/log:/var/log
+      - ./config/promtail.yaml:/etc/promtail/config.yml
+      - ./logs/:/var/log/ 
+    command: -config.file=/etc/promtail/config.yml
+  log-generator:
+    image: mingrammer/flog
+    command: 
+      - --loop
+      - --format=json
+      - --number=20
+      - --delay=100ms
+      - --output=/var/log/generated-logs.log
+      - --overwrite
+      - --type=log
+    volumes:
+      - ./logs/:/var/log/ 
   grafana:
     image: grafana/grafana-enterprise
     container_name: grafana
@@ -20,6 +46,31 @@ services:
       - '3000:3000'
     volumes:
       - grafana-storage:/var/lib/grafana
+  prometheus:
+    image: quay.io/prometheus/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./config/prometheus.yaml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      # - '-storage.local.path=/prometheus'
+    ports:
+      - 9090:9090
+  mysqld-exporter:
+    image: quay.io/prometheus/mysqld-exporter
+    command:
+     - --collect.info_schema.tablestats
+     - --mysqld.username=firman:admin
+     - --mysqld.address=db:3306
+    container_name: mysqld-exporter
+    # environment:
+    #   - DATA_SOURCE_NAME=firman:admin@(db:3306)/
+    ports:
+      - 9104:9104
+    depends_on:
+      db:
+        condition: service_healthy
   db:
     image: mysql:8.0
     restart: always
@@ -43,3 +94,4 @@ services:
 volumes:
   grafana-storage:
   my-db: 
+  prometheus_data:
