@@ -12,6 +12,14 @@ services:
     environment:
       - DBUSER=firman
       - DBPASS=admin
+  grafana:
+    image: grafana/grafana-enterprise
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    volumes:
+      - grafana-storage:/var/lib/grafana
   db:
     image: mysql:8.0
     restart: always
@@ -33,4 +41,5 @@ services:
       retries: 5
       start_period: 30s
 volumes:
-  my-db:
+  grafana-storage:
+  my-db: 

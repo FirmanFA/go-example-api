@@ -89,7 +89,7 @@ func main() {
 	// use ginSwagger middleware to serve the API docs
 	router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	router.Run("localhost:8080")
+	router.Run(":8080")
 }
 
 // getProjects godoc
