@@ -1,6 +1,9 @@
 services:
   web:
     build: .
+    depends_on:
+      db:
+        condition: service_healthy
     ports:
       - "8080:8080"
     expose:
@@ -24,5 +27,10 @@ services:
       - '3306'
     volumes:
       - my-db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u $$MYSQL_USER --password=$$MYSQL_PASSWORD || exit 1"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
 volumes:
   my-db:
