@@ -2,8 +2,10 @@
 
 A sample backend RESTful API project written in GoLang using Gin framework and MySQL.
 
-## Before Running
-Set environment variables `DBUSER` and `DBPASS` with MySQL username and password.
+## Tech Stack
+- `Docker & Docker Compose`: For containerization
+- `Grafa Loki and Promtail`: For logging observability
+- `Prometheus`: For database observability
 
 ## Dependencies
 
