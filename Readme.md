@@ -4,7 +4,7 @@ A sample backend RESTful API project written in GoLang using Gin framework and M
 
 ## Tech Stack
 - `Docker & Docker Compose`: For containerization
-- `Grafa Loki and Promtail`: For logging observability
+- `Grafana Loki and Promtail`: For logging observability
 - `Prometheus`: For database observability
 
 ## Dependencies
