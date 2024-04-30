@@ -12,6 +12,7 @@ services:
     environment:
       - DBUSER=firman
       - DBPASS=admin
+      - DBHOST=db:3306
   loki:
     image: grafana/loki:2.9.0
     ports:
