@@ -4,12 +4,13 @@ import (
 	"database/sql"
 	"fmt"
 	"go-example-api/docs"
-	"log"
 	"net/http"
 	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-sql-driver/mysql"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
@@ -52,6 +53,15 @@ func main() {
 	docs.SwaggerInfo.Host = "localhost:8080"
 	docs.SwaggerInfo.Schemes = []string{"http", "https"}
 
+	runLogFile, _ := os.OpenFile(
+        "logs/app.log",
+        os.O_APPEND|os.O_CREATE|os.O_WRONLY,
+        0664,
+    )
+
+	multi := zerolog.MultiLevelWriter(os.Stdout, runLogFile)
+	log.Logger = zerolog.New(multi).With().Timestamp().Logger()
+
 	fmt.Println(os.Getenv("DBUSER"))
 	fmt.Println(os.Getenv("DBPASS"))
 
@@ -67,16 +77,14 @@ func main() {
 	// Get a database handle.
 	var err error
 
-	fmt.Println(cfg.FormatDSN())
-
 	db, err = sql.Open("mysql", cfg.FormatDSN())
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Msg(err.Error())
 	}
 
 	pingErr := db.Ping()
 	if pingErr != nil {
-		log.Fatal(pingErr)
+		log.Fatal().Msg(pingErr.Error())
 	}
 
 	router := gin.Default()
@@ -108,6 +116,7 @@ func getProjects(c *gin.Context) {
 
 	rows, err := db.Query("SELECT p.id, p.title, p.leader, pb.budget_value, pb.down_payment, pb.deadline FROM project p JOIN project_budget pb ON p.id = pb.project_id;")
 	if err != nil {
+		log.Error().Msg(err.Error())
 		return
 	}
 
@@ -117,6 +126,8 @@ func getProjects(c *gin.Context) {
 		var proj projectModel
 		var projBudget budgetModel
 		if err := rows.Scan(&proj.ID, &proj.Title, &proj.Leader, &projBudget.BudgetValue, &projBudget.DownPayment, &projBudget.Deadline); err != nil {
+			log.Error().Msg(err.Error())
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"message":"internal server error"})
 			return
 		}
 		proj.Budget = projBudget
@@ -146,10 +157,11 @@ func getProjectById(c *gin.Context) {
 	row := db.QueryRow("SELECT p.id, p.title, p.leader, pb.budget_value, pb.down_payment, pb.deadline FROM project p JOIN project_budget pb ON p.id = pb.project_id WHERE p.id = ?", id)
 	if err := row.Scan(&proj.ID, &proj.Title, &proj.Leader, &projBudget.BudgetValue, &projBudget.DownPayment, &projBudget.Deadline); err != nil {
 		if err == sql.ErrNoRows {
+			log.Error().Msg(err.Error())
 			c.IndentedJSON(http.StatusNotFound, gin.H{"message": "project not found"})
 			return
 		}
-		fmt.Println("Error scanning data:", err.Error())
+		log.Error().Msg("Error scanning data: " + err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": "internal server error"})
 		return
 	}
@@ -172,7 +184,7 @@ func postProjects(c *gin.Context) {
 
 	//binding request to struct model
 	if err := c.BindJSON(&newProject); err != nil {
-		fmt.Println("Error binding json to struct:", err)
+		log.Error().Msg("Error binding json to struct: " + err.Error())
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "bad request"})
 		return
 	}
@@ -180,7 +192,7 @@ func postProjects(c *gin.Context) {
 	// Start a transaction
 	tx, err := db.Begin()
 	if err != nil {
-		fmt.Println("Error starting transaction:", err)
+		log.Error().Msg("Error starting transaction: " + err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": "Internal server error"})
 		return
 	}
@@ -189,7 +201,7 @@ func postProjects(c *gin.Context) {
 	projectQuery := "INSERT INTO project (title, leader) VALUES (?, ?)"
 	projectResult, err := tx.Exec(projectQuery, newProject.Title, newProject.Leader)
 	if err != nil {
-		fmt.Println("Error inserting project to database:", err)
+		log.Error().Msg("Error inserting project to database: " + err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": "Internal server error"})
 		// Rollback the transaction if there's an error
 		tx.Rollback()
@@ -199,7 +211,7 @@ func postProjects(c *gin.Context) {
 	projectID, err := projectResult.LastInsertId()
 
 	if err != nil {
-		fmt.Println("Error getting last inserted id:", err)
+		log.Error().Msg("Error getting last inserted id: " + err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": "Internal server error"})
 		return
 	}
@@ -208,7 +220,7 @@ func postProjects(c *gin.Context) {
 	budgetQuery := "INSERT INTO project_budget (budget_value, down_payment, deadline, project_id) VALUES (?, ?, ?, ?)"
 	_, err = tx.Exec(budgetQuery, newProject.Budget.BudgetValue, newProject.Budget.DownPayment, newProject.Budget.Deadline, projectID)
 	if err != nil {
-		fmt.Println("Error inserting into project_budget table:", err)
+		log.Error().Msg("Error inserting into project_budget table: " + err.Error())
 
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": "Internal server error"})
 
@@ -219,7 +231,7 @@ func postProjects(c *gin.Context) {
 	// Commit the transaction if all insertions were successful
 	err = tx.Commit()
 	if err != nil {
-		fmt.Println("Error committing transaction:", err)
+		log.Error().Msg("Error committing transaction: " + err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": "Internal server error"})
 		return
 	}
@@ -249,7 +261,7 @@ func updateProject(c *gin.Context) {
 
 	//binding request to struct model
 	if err := c.BindJSON(&newProject); err != nil {
-		fmt.Println("Error binding json to struct:", err)
+		log.Error().Msg("Error binding json to struct: " + err.Error())
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "bad request"})
 		return
 	}
@@ -257,7 +269,7 @@ func updateProject(c *gin.Context) {
 	// Start a transaction
 	tx, err := db.Begin()
 	if err != nil {
-		fmt.Println("Error starting transaction:", err)
+		log.Error().Msg("Error starting transaction: " + err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": "Internal server error"})
 		return
 	}
@@ -266,7 +278,7 @@ func updateProject(c *gin.Context) {
 	projectQuery := "UPDATE project SET title = ?, leader = ? WHERE id = ?"
 	updateProjectResult, err := tx.Exec(projectQuery, newProject.Title, newProject.Leader, id)
 	if err != nil {
-		fmt.Println("Error updating project table:", err)
+		log.Error().Msg("Error updating project table:" + err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": "Internal server error"})
 		// Rollback the transaction if there's an error
 		tx.Rollback()
@@ -274,7 +286,7 @@ func updateProject(c *gin.Context) {
 	}
 
 	if rowAffected, _ := updateProjectResult.RowsAffected(); rowAffected == 0 {
-		fmt.Println("No rows affected")
+		log.Error().Msg("not found")
 		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "not found"})
 		// Rollback the transaction if there's an error
 		tx.Rollback()
@@ -285,7 +297,7 @@ func updateProject(c *gin.Context) {
 	budgetQuery := "UPDATE project_budget SET budget_value = ?, down_payment = ?, deadline = ? WHERE project_id = ?"
 	updateBudgetResult, err := tx.Exec(budgetQuery, newProject.Budget.BudgetValue, newProject.Budget.BudgetValue, newProject.Budget.Deadline, id)
 	if err != nil {
-		fmt.Println("Error updating project_budget table:", err)
+		log.Error().Msg("Error updating project_budget table: " + err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": "Internal server error"})
 		// Rollback the transaction if there's an error
 		tx.Rollback()
@@ -293,7 +305,7 @@ func updateProject(c *gin.Context) {
 	}
 
 	if rowAffected, _ := updateBudgetResult.RowsAffected(); rowAffected == 0 {
-		fmt.Println("No rows affected")
+		log.Error().Msg("No rows affected")
 		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "not found"})
 		// Rollback the transaction if there's an error
 		tx.Rollback()
@@ -303,7 +315,7 @@ func updateProject(c *gin.Context) {
 	// Commit the transaction if all updates were successful
 	err = tx.Commit()
 	if err != nil {
-		fmt.Println("Error committing transaction:", err)
+		log.Error().Msg("Error committing transaction: " + err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": "Internal server error"})
 		return
 	}
@@ -331,7 +343,7 @@ func deleteProject(c *gin.Context) {
 	// Start a transaction
 	tx, err := db.Begin()
 	if err != nil {
-		fmt.Println("Error starting transaction:", err)
+		log.Error().Msg("Error starting transaction: " + err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": "Internal server error"})
 		return
 	}
@@ -340,7 +352,7 @@ func deleteProject(c *gin.Context) {
 	budgetQuery := "DELETE FROM project_budget WHERE project_id = ?"
 	deleteBudgetResult, err := tx.Exec(budgetQuery, id)
 	if err != nil {
-		fmt.Println("Error deleting from project_budget table:", err)
+		log.Error().Msg("Error deleting from project_budget table: " + err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": "Internal server error"})
 		// Rollback the transaction if there's an error
 		tx.Rollback()
@@ -348,7 +360,7 @@ func deleteProject(c *gin.Context) {
 	}
 
 	if rowAffected, _ := deleteBudgetResult.RowsAffected(); rowAffected == 0 {
-		fmt.Println("No rows affected")
+		log.Error().Msg("no rows affected")
 		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "not found"})
 		// Rollback the transaction if there's an error
 		tx.Rollback()
@@ -359,7 +371,7 @@ func deleteProject(c *gin.Context) {
 	projectQuery := "DELETE FROM project WHERE id = ?"
 	deleteProjectResult, err := tx.Exec(projectQuery, id)
 	if err != nil {
-		fmt.Println("Error deleting from project table:", err)
+		log.Error().Msg("Error deleting from project table: " + err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": "Internal server error"})
 		// Rollback the transaction if there's an error
 		tx.Rollback()
@@ -367,7 +379,7 @@ func deleteProject(c *gin.Context) {
 	}
 
 	if rowAffected, _ := deleteProjectResult.RowsAffected(); rowAffected == 0 {
-		fmt.Println("No rows affected")
+		log.Error().Msg("No rows affected")
 		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "not found"})
 		// Rollback the transaction if there's an error
 		tx.Rollback()
@@ -377,7 +389,7 @@ func deleteProject(c *gin.Context) {
 	// Commit the transaction if all deletions were successful
 	err = tx.Commit()
 	if err != nil {
-		fmt.Println("Error committing transaction:", err)
+		log.Error().Msg("Error committing transaction:" + err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": "Internal server error"})
 		return
 	}
