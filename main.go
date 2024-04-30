@@ -70,7 +70,9 @@ func main() {
 		User:   os.Getenv("DBUSER"),
 		Passwd: os.Getenv("DBPASS"),
 		Net:    "tcp",
-		Addr:   "db:3306",
+		// db:3306
+		//localhost:3306
+		Addr:   os.Getenv("DBHOST"),
 		DBName: "company",
 	}
 
